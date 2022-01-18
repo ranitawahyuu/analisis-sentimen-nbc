@@ -1,4 +1,4 @@
-import imp
+from glob import glob
 import re
 from flask import Flask, app, render_template, request, url_for, flash
 import flask
@@ -17,7 +17,16 @@ import pandas as pd
 from googletrans import Translator
 from textblob import TextBlob
 from werkzeug.utils import redirect
-
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.feature_extraction.text import TfidfTransformer, TfidfVectorizer
+import numpy as np
+import pandas as pd
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+from sklearn.metrics import accuracy_score, precision_score, recall_score
+import time
 
 
 app = Flask(__name__, static_folder="templates/assets")
@@ -83,6 +92,72 @@ def prepropecossing_twitter():
             writer.writerow(tweets)
             flash('Preprocessing Berhasil', 'preprocessing_data')
 
+
+
+df= None
+df2 = None
+akurasi = 0
+def klasifikasi_data():
+    global df
+    global df2
+    global akurasi
+    # membca csv
+    data = pd.read_csv("templates/assets/files/Data Labelling Ranita.csv")
+    tweet = data.iloc[:, 1]
+    y =  data.iloc[:, 2]
+
+
+    # kalimat ke angka
+    vec = CountVectorizer()
+    x = vec.fit_transform(tweet)
+    # tfidf
+    tf_transform = TfidfTransformer().fit(x)
+    x = tf_transform.transform(x)
+
+
+    xtoarray = x.toarray()
+    xshape = x.shape
+    xnnz = x.nnz
+
+
+    # split data training dan testing
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
+
+    # naive bayes
+    # naove bayes
+    clf = MultinomialNB()
+    clf.fit(x_train, y_train)
+
+    predict = clf.predict(x_test)
+    report = classification_report(y_test, predict, output_dict=True)
+    # simpan ke csv
+    clsf_report = pd.DataFrame(report).transpose()
+    clsf_report.to_csv('templates/assets/files/Data Hasil Klasifikasi.csv', index= True)
+
+
+
+
+    unique_label = np.unique([y_test, predict])
+    cmtx = pd.DataFrame(
+        confusion_matrix(y_test, predict, labels=unique_label), 
+        index=['true:{:}'.format(x) for x in unique_label], 
+        columns=['pred:{:}'.format(x) for x in unique_label]
+    )
+
+
+    
+    cmtx.to_csv('templates/assets/files/Data Confusion Matrix.csv', index= True)
+
+    df = pd.read_csv('templates/assets/files/Data Confusion Matrix.csv', sep=",")
+    df.rename( columns={'Unnamed: 0':''}, inplace=True )
+
+    df2 = pd.read_csv('templates/assets/files/Data Hasil Klasifikasi.csv', sep=",")
+    df2.rename( columns={'Unnamed: 0':''}, inplace=True )
+
+    akurasi = round(accuracy_score(y_test, predict)  * 100, 2)
+    
+
+    
 
 
             
@@ -256,19 +331,13 @@ def preprocessing():
 
 @app.route('/klasifikasi',  methods= ['POST', 'GET'])
 def klasifikasi():
-    if request.method == 'POST':
-        if request.form.get('matriks') == 'matriks':
-            df = pd.read_csv('templates/assets/files/confusion matrix.csv', sep=",")
-            df.rename( columns={'Unnamed: 0':''}, inplace=True )
-
-            df2 = pd.read_csv('templates/assets/files/matrix.csv', sep=",")
-            df2.rename( columns={'Unnamed: 0':''}, inplace=True )
+    # if request.method == 'POST':
+    #     if request.form.get('matriks') == 'matriks':
 
             
-            return render_template('klasifikasi.html', tables=[df.to_html(classes='table table-striped', index=False)], titles=df.columns.values, tables2=[df2.to_html(classes='table table-striped', index=False)], titles2=df2.columns.values)
-            
 
-    return render_template('klasifikasi.html')
+    return render_template('klasifikasi.html', accuracy=akurasi, tables=[df.to_html(classes='table table-striped', index=False)], titles=df.columns.values, tables2=[df2.to_html(classes='table table-striped', index=False)], titles2=df2.columns.values)
+            
 
 @app.route('/labelling', methods= ['POST', 'GET'])
 def labelling():
@@ -289,8 +358,8 @@ def labelling():
             
             return render_template('Labelling.html', value=hasil_labelling)
         if request.form.get('lanjutkan') == 'Lanjutkan':
-            labelling_process()
-            return redirect(url_for('labelling'))
+            klasifikasi_data()
+            return redirect(url_for('klasifikasi'))
 
 
     return render_template('Labelling.html', value=hasil_labelling)

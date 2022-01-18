@@ -28,6 +28,14 @@ Coded by www.creative-tim.com
   <link href="assets/css/paper-dashboard.css?v=2.0.1" rel="stylesheet" />
   <!-- CSS Just for demo purpose, don't include it in your project -->
   <link href="assets/demo/demo.css" rel="stylesheet" />
+  <style>
+    .table-responsive::-webkit-scrollbar {
+      width: 0 !important
+      
+    }
+    .table-responsive { overflow: -moz-scrollbars-none; }
+    .table-responsive { -ms-overflow-style: none; }
+  </style>
 </head>
 
 <body class="">
@@ -139,31 +147,39 @@ Coded by www.creative-tim.com
         <div class="card" style="border-radius: 10px;">
           <!-- <img class="card-img-top" src="..." alt="Card image cap"> -->
           <div class="card-body">
-            <h5 class="card-title">Diagram Garis</h5>
+            <h5 class="card-title">Klasifikasi Naive Bayes</h5>
             <hr>
-            <p class="card-text">Ada diagramnya gitu</p>
-            <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p>
-            <form enctype="multipart/form-data" method="post">
-              
-              <input class="btn"  style="background-color: #ff6700;" type="submit" name="matriks" id="matriks"  value="matriks">
-
-            </form>
+          
 
             <div class="table-responsive">
-                        {% for table in tables %}
+                        {% for table in tables2 %}
                             {{ table|safe }}
                         {% endfor %}
                         
                       </div>
 
+                      <div class="alert alert-success" role="alert">
+                          Akurasi Naive Bayes {{ accuracy }} %
+                      </div>
+                    
+          </div>
+        </div>
+
+        <div class="card" style="border-radius: 10px;">
+          <!-- <img class="card-img-top" src="..." alt="Card image cap"> -->
+          <div class="card-body">
+            <h5 class="card-title">Confusion Matrix</h5>
+            <hr>
+
                       <div class="table-responsive">
-                        {% for table in tables2 %}
+                        {% for table in tables %}
                             {{ table|safe }}
                         {% endfor %}
                         
                       </div>
           </div>
         </div>
+        
             <div class="card-group" style="display: flex; justify-content: space-between; grid-gap: 2em;">
               <div class="card" style="border-radius: 10px;">
                 <!-- <img class="card-img-top" src="..." alt="Card image cap"> -->
