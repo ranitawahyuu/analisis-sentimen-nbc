@@ -13,6 +13,11 @@ from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFacto
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 nltk.download('punkt')
 import googletrans
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+from PIL import Image
+import numpy as np
+import urllib.request
 import pandas as pd
 from googletrans import Translator
 from textblob import TextBlob
@@ -27,6 +32,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 import time
+import matplotlib.pyplot as plt
+from collections import Counter
 
 
 app = Flask(__name__, static_folder="templates/assets")
@@ -96,10 +103,14 @@ def prepropecossing_twitter():
 
 df= None
 df2 = None
+imageUrl = ""
+imageUrlDiagram = ""
 akurasi = 0
 def klasifikasi_data():
     global df
+    global imageUrl
     global df2
+    global imageUrlDiagram
     global akurasi
     # membca csv
     data = pd.read_csv("templates/assets/files/Data Labelling Ranita.csv")
@@ -155,7 +166,35 @@ def klasifikasi_data():
     df2.rename( columns={'Unnamed: 0':''}, inplace=True )
 
     akurasi = round(accuracy_score(y_test, predict)  * 100, 2)
-    
+
+    kalimat = ""
+
+    for i in tweet.tolist():
+        s =("".join(i))
+        kalimat += s
+
+    urllib.request.urlretrieve("https://firebasestorage.googleapis.com/v0/b/sentimen-97d49.appspot.com/o/Circle-icon.png?alt=media&token=b9647ca7-dfdb-46cd-80a9-cfcaa45a1ee4", 'love.png')
+    mask = np.array(Image.open("love.png"))
+    wordcloud = WordCloud(width=1600, height=800, max_font_size=200, background_color='white', mask = mask)
+    wordcloud.generate(kalimat)
+    plt.figure(figsize=(12,10))
+
+    plt.imshow(wordcloud, interpolation='bilinear')
+
+    plt.axis("off")
+
+    plt.savefig('templates/assets/files/wordcloud.png')
+    imageUrl = "templates/assets/files/wordcloud.png"
+
+    # diagram
+    numbers_list = y.tolist()
+    counter = dict((i, numbers_list.count(i)) for i in numbers_list)
+    sizes = [counter.get('Positif'),counter.get('Netral'),counter.get('Negatif')]
+    labels = ['Positif', 'Netral', 'Negatif']
+    plt.pie(sizes, labels=labels, autopct='%1.0f%%', shadow=True, textprops={'fontsize': 20})
+    plt.savefig('templates/assets/files/diagram.png')
+    imageUrlDiagram = "templates/assets/files/diagram.png"
+        
 
     
 
@@ -333,11 +372,12 @@ def preprocessing():
 def klasifikasi():
     # if request.method == 'POST':
     #     if request.form.get('matriks') == 'matriks':
-
+    
+    return render_template('klasifikasi.html',wc=imageUrl,diagram=imageUrlDiagram,  accuracy=akurasi, tables=[df.to_html(classes='table table-striped', index=False)], titles=df.columns.values, tables2=[df2.to_html(classes='table table-striped', index=False)], titles2=df2.columns.values)
+     
             
 
-    return render_template('klasifikasi.html', accuracy=akurasi, tables=[df.to_html(classes='table table-striped', index=False)], titles=df.columns.values, tables2=[df2.to_html(classes='table table-striped', index=False)], titles2=df2.columns.values)
-            
+          
 
 @app.route('/labelling', methods= ['POST', 'GET'])
 def labelling():
