@@ -105,11 +105,14 @@ df= None
 df2 = None
 imageUrl = ""
 imageUrlDiagram = ""
+imageUrlDiagramBatang = ""
+
 akurasi = 0
 def klasifikasi_data():
     global df
     global imageUrl
     global df2
+    global imageUrlDiagramBatang
     global imageUrlDiagram
     global akurasi
     # membca csv
@@ -194,6 +197,19 @@ def klasifikasi_data():
     plt.pie(sizes, labels=labels, autopct='%1.0f%%', shadow=True, textprops={'fontsize': 20})
     plt.savefig('templates/assets/files/diagram.png')
     imageUrlDiagram = "templates/assets/files/diagram.png"
+
+    # diagram batang
+    # creating the bar plot
+
+    plt.figure()
+
+    plt.hist(numbers_list)
+    
+    plt.xlabel("Tweet tentang Xiaomi")
+    plt.ylabel("Jumlah Tweet")
+    plt.title("Presentase Sentimen Tweet Xiaomi Redmi")
+    plt.savefig('templates/assets/files/diagram-batang.png')
+    imageUrlDiagramBatang = "templates/assets/files/diagram-batang.png"
         
 
     
@@ -373,7 +389,7 @@ def klasifikasi():
     # if request.method == 'POST':
     #     if request.form.get('matriks') == 'matriks':
     
-    return render_template('klasifikasi.html',wc=imageUrl,diagram=imageUrlDiagram,  accuracy=akurasi, tables=[df.to_html(classes='table table-striped', index=False)], titles=df.columns.values, tables2=[df2.to_html(classes='table table-striped', index=False)], titles2=df2.columns.values)
+    return render_template('klasifikasi.html',wc=imageUrl,diagram=imageUrlDiagram,diagramBatang=imageUrlDiagramBatang , accuracy=akurasi, tables=[df.to_html(classes='table table-striped', index=False)], titles=df.columns.values, tables2=[df2.to_html(classes='table table-striped', index=False)], titles2=df2.columns.values)
      
             
 
