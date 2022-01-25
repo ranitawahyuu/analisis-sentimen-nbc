@@ -1,18 +1,17 @@
+
 from glob import glob
 import re
+from tkinter.tix import Y_REGION
 from flask import Flask, app, render_template, request, url_for, flash
-import flask
+from matplotlib import transforms
 from nltk.util import pr
 import tweepy
 import csv
 import nltk
-from nltk.probability import FreqDist
-from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import stopwords
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory, StopWordRemover, ArrayDictionary
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 nltk.download('punkt')
-import googletrans
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -24,16 +23,16 @@ from textblob import TextBlob
 from werkzeug.utils import redirect
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.feature_extraction.text import TfidfTransformer, TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
 import numpy as np
 import pandas as pd
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from sklearn.metrics import accuracy_score, precision_score, recall_score
-import time
 import matplotlib.pyplot as plt
-from collections import Counter
+import joblib
+import pickle
 
 
 app = Flask(__name__, static_folder="templates/assets")
@@ -103,46 +102,47 @@ def prepropecossing_twitter():
 
 df= None
 df2 = None
-imageUrl = ""
-imageUrlDiagram = ""
-imageUrlDiagramBatang = ""
-
 akurasi = 0
 def klasifikasi_data():
     global df
-    global imageUrl
     global df2
-    global imageUrlDiagramBatang
-    global imageUrlDiagram
     global akurasi
     # membca csv
     data = pd.read_csv("templates/assets/files/Data Labelling Ranita.csv")
     tweet = data.iloc[:, 1]
     y =  data.iloc[:, 2]
 
+    x_train, x_test, y_train, y_test = train_test_split(tweet,y, test_size=0.2)
 
-    # kalimat ke angka
-    vec = CountVectorizer()
-    x = vec.fit_transform(tweet)
+    # Vectorize text reviews to numbers
+    vec = CountVectorizer(decode_error="replace", max_features=5000)
+    x = vec.fit_transform(x_train)
+    x2 = vec.transform(x_test)
     # tfidf
-    tf_transform = TfidfTransformer().fit(x)
-    x = tf_transform.transform(x)
+    tf_transform_train = TfidfTransformer().fit(x)
+    x = tf_transform_train.transform(x)
 
+    tf_transform_test = TfidfTransformer().fit(x2)
+    x2 = tf_transform_test.transform(x2)
 
-    xtoarray = x.toarray()
-    xshape = x.shape
-    xnnz = x.nnz
+    # naive  bayes
 
-
-    # split data training dan testing
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
-
-    # naive bayes
-    # naove bayes
     clf = MultinomialNB()
-    clf.fit(x_train, y_train)
+    clf.fit(x, y_train)
 
-    predict = clf.predict(x_test)
+
+    # joblib.dump(clf, 'templates/assets/files/model.pkl') 
+    # joblib.dump(tf_transform_train, 'templates/assets/files/tfidf.pkl') 
+    # joblib.dump(vec, 'templates/assets/files/countvec.pkl') 
+    pickle.dump(vec, open('templates/assets/files/countvec.pkl', 'wb'))
+    pickle.dump(tf_transform_train, open('templates/assets/files/tfidf.pkl', 'wb'))
+    pickle.dump(clf, open('templates/assets/files/model.pkl', 'wb'))
+    
+    
+
+    predict = clf.predict(x2)
+
+
     report = classification_report(y_test, predict, output_dict=True)
     # simpan ke csv
     clsf_report = pd.DataFrame(report).transpose()
@@ -154,8 +154,8 @@ def klasifikasi_data():
     unique_label = np.unique([y_test, predict])
     cmtx = pd.DataFrame(
         confusion_matrix(y_test, predict, labels=unique_label), 
-        index=['true:{:}'.format(x) for x in unique_label], 
-        columns=['pred:{:}'.format(x) for x in unique_label]
+        index=['{:}'.format(x) for x in unique_label], 
+        columns=['{:}'.format(x) for x in unique_label]
     )
 
 
@@ -187,16 +187,22 @@ def klasifikasi_data():
     plt.axis("off")
 
     plt.savefig('templates/assets/files/wordcloud.png')
-    imageUrl = "templates/assets/files/wordcloud.png"
 
     # diagram
-    numbers_list = y.tolist()
+    numbers_list = y_test.tolist()
     counter = dict((i, numbers_list.count(i)) for i in numbers_list)
-    sizes = [counter.get('Positif'),counter.get('Netral'),counter.get('Negatif')]
+    isPositive = 'Positif' in counter.keys()
+    isNegative = 'Negatif' in counter.keys()
+    isNeutral = 'Netral' in counter.keys()
+
+    positif = counter["Positif"] if isPositive == True  else 0
+    negatif = counter["Negatif"] if isNegative == True  else 0
+    netral = counter["Netral"] if isNeutral == True  else 0
+
+    sizes = [positif, netral, negatif]
     labels = ['Positif', 'Netral', 'Negatif']
     plt.pie(sizes, labels=labels, autopct='%1.0f%%', shadow=True, textprops={'fontsize': 20})
     plt.savefig('templates/assets/files/diagram.png')
-    imageUrlDiagram = "templates/assets/files/diagram.png"
 
     # diagram batang
     # creating the bar plot
@@ -209,11 +215,149 @@ def klasifikasi_data():
     plt.ylabel("Jumlah Tweet")
     plt.title("Presentase Sentimen Tweet Xiaomi Redmi")
     plt.savefig('templates/assets/files/diagram-batang.png')
-    imageUrlDiagramBatang = "templates/assets/files/diagram-batang.png"
         
 
-    
 
+hasil_model_predict = []
+def model_predict():
+    global df
+    global df2
+    global akurasi
+    # membca csv
+    data = pd.read_csv("templates/assets/files/Data Labelling Model Predict Ranita.csv")
+    tweet = data.iloc[:, 1]
+    y = data.iloc[:, 2]
+    
+    # Vectorize text reviews to numbers
+    # tfidf = joblib.load('templates/assets/files/tfidf.pkl')
+    # nb = joblib.load('templates/assets/files/model.pkl')
+    # vec = joblib.load('templates/assets/files/countvec.pkl')
+    with open('templates/assets/files/model.pkl', 'rb') as handle:
+        model = pickle.load(handle)
+
+    with open('templates/assets/files/countvec.pkl', 'rb') as h:
+        vec = pickle.load(h)
+   
+    with open('templates/assets/files/tfidf.pkl', 'rb') as t:
+        tfidf = pickle.load(t)
+
+    file = open('templates/assets/files/Data Hasil Model Predict.csv', 'w', newline='', encoding='utf-8')
+    writer = csv.writer(file)
+    for i, line in data.iterrows():
+        isi = line[1]
+        # # transform cvector & tfidf
+        transform_cvec = vec.transform([isi])
+        transform_tfidf = tfidf.transform(transform_cvec)
+        print(transform_tfidf)
+        # predict start
+        predic_result = model.predict(transform_tfidf)
+        print(predic_result)
+
+        data = [isi , predic_result[0]]
+        hasil_model_predict.append(data)
+        writer.writerow(data)
+        
+        
+    # # x2 = vec.fit_transform(x_test)
+    # # # tfidf
+    # tf_transform_train = TfidfTransformer().fit(x)
+    # x = tf_transform_train.transform(x)
+
+    # tf_transform_test = TfidfTransformer().fit(x2)
+    # x2 = tf_transform_test.transform(x2)
+
+    # naive  bayes
+
+    # clf = MultinomialNB()
+    # clf.fit(x, y_train)
+
+    # x = vec.fit_transform(tweet)
+    # transform_tfidf = tfidf.transform(x)
+    # print(transform_tfidf, flush=True)
+
+
+
+    # file = open('templates/assets/files/Data Hasil Model Predict.csv', 'w', newline='', encoding='utf-8')
+    # writer = csv.writer(file)
+    # hasil_model_predict.clear()
+    # for i in range(len(predict)):
+    #     data = [tweet.tolist()[i],y.tolist()[i] , predict[i]]
+    #     hasil_model_predict.append(data)
+    #     writer.writerow(data)
+
+    # report = classification_report(y, predict, output_dict=True)
+    # # simpan ke csv
+    # clsf_report = pd.DataFrame(report).transpose()
+    # clsf_report.to_csv('templates/assets/files/Data Hasil Klasifikasi.csv', index= True)
+
+
+
+
+    # unique_label = np.unique([y, predict])
+    # cmtx = pd.DataFrame(
+    #     confusion_matrix(y, predict, labels=unique_label), 
+    #     index=['{:}'.format(x) for x in unique_label], 
+    #     columns=['{:}'.format(x) for x in unique_label]
+    # )
+
+
+    
+    # cmtx.to_csv('templates/assets/files/Data Confusion Matrix.csv', index= True)
+
+    # df = pd.read_csv('templates/assets/files/Data Confusion Matrix.csv', sep=",")
+    # df.rename( columns={'Unnamed: 0':''}, inplace=True )
+
+    # df2 = pd.read_csv('templates/assets/files/Data Hasil Klasifikasi.csv', sep=",")
+    # df2.rename( columns={'Unnamed: 0':''}, inplace=True )
+
+    # akurasi = round(accuracy_score(y, predict)  * 100, 2)
+
+    kalimat = ""
+
+    for i in tweet.tolist():
+        s =("".join(i))
+        kalimat += s
+
+    urllib.request.urlretrieve("https://firebasestorage.googleapis.com/v0/b/sentimen-97d49.appspot.com/o/Circle-icon.png?alt=media&token=b9647ca7-dfdb-46cd-80a9-cfcaa45a1ee4", 'love.png')
+    mask = np.array(Image.open("love.png"))
+    wordcloud = WordCloud(width=1600, height=800, max_font_size=200, background_color='white', mask = mask)
+    wordcloud.generate(kalimat)
+    plt.figure(figsize=(12,10))
+
+    plt.imshow(wordcloud, interpolation='bilinear')
+
+    plt.axis("off")
+
+    plt.savefig('templates/assets/files/wordcloud2.png')
+
+    # diagram
+    numbers_list = y.tolist()
+    counter = dict((i, numbers_list.count(i)) for i in numbers_list)
+    isPositive = 'Positif' in counter.keys()
+    isNegative = 'Negatif' in counter.keys()
+    isNeutral = 'Netral' in counter.keys()
+
+    positif = counter["Positif"] if isPositive == True  else 0
+    negatif = counter["Negatif"] if isNegative == True  else 0
+    netral = counter["Netral"] if isNeutral == True  else 0
+
+    sizes = [positif, netral, negatif]
+    labels = ['Positif', 'Netral', 'Negatif']
+    plt.pie(sizes, labels=labels, autopct='%1.0f%%', shadow=True, textprops={'fontsize': 20})
+    plt.savefig('templates/assets/files/diagram2.png')
+
+    # diagram batang
+    # creating the bar plot
+
+    plt.figure()
+
+    plt.hist(numbers_list)
+    
+    plt.xlabel("Tweet tentang Xiaomi")
+    plt.ylabel("Jumlah Tweet")
+    plt.title("Presentase Sentimen Tweet Xiaomi Redmi")
+    plt.savefig('templates/assets/files/diagram-batang2.png')
+    flash('Model Predict Berhasil', 'model_berhasil')
 
             
 def crawling_twitter_query(query, jumlah):
@@ -255,44 +399,6 @@ def crawling_twitter_query(query, jumlah):
         writer.writerow(tweets)
 
 
-def crawling_twitter_tanggal(query, sejak, sampai):
-    api_key = "XaYBZDIN7j6xVHdPRIfOsu6mJ"
-    api_secret_key = "CQKtU7Bpi8xmzhfLgqFguABTBOvBUwS8KQMdQk5A1HAttLKLSx"
-    access_token = "1280139539361566721-e7s1tA20RyOTUAqAPT5dxiMawuUOWe"
-    access_token_secret = "7PhFWlLR6eHVNbmtLqKjBaGJnQjQRUAp9fkcL2CUpwb4B"
-
-
-
-    auth = tweepy.OAuthHandler(api_key, api_secret_key)
-    auth.set_access_token(access_token, access_token_secret)
-    api = tweepy.API(auth, wait_on_rate_limit=True)
-    filter = " -filter:retweets"
-    # Membuat File CSV
-     #membuat file scrapping csv
-    file = open('templates/assets/files/Data Scrapping Ranita.csv', 'w', newline='', encoding='utf-8')
-    writer = csv.writer(file)  
-
-    
-    hasil_scrapping.clear()
-
-    for tweet in tweepy.Cursor(api.search, q=query + filter, lang='id', since=sejak, until=sampai,  tweet_mode="extended").items():
-        tweet_properties = {}
-        tweet_properties["tanggal_tweet"] = tweet.created_at
-        tweet_properties["username"] = tweet.user.screen_name
-        tweet_properties["tweet"] =  tweet.full_text.replace('\n', '')
-        
-        
- 
-        # Menuliskan data ke csv
-        tweets =[tweet.created_at, tweet.user.screen_name, tweet.full_text.replace('\n', '')]
-        if tweet.retweet_count > 0:
-            if tweet_properties not in hasil_scrapping:
-                hasil_scrapping.append(tweets)
-        else:
-            hasil_scrapping.append(tweets)
-
-        writer.writerow(tweets)
-
 def labelling_process():
     # Membuat File CSV
     file = open('templates/assets/files/Data Labelling Ranita.csv', 'w', newline='', encoding='utf-8')
@@ -304,7 +410,10 @@ def labelling_process():
         hasil_labelling.clear()
         for row in readCSV:
             tweet = {}
-            value = translator.translate(row[6], dest='en')
+            try:
+                value = translator.translate(row[6], dest='en')
+            except:
+                print("Terjadi kesalahan", flush=True)
             terjemahan = value.text
             data_label = TextBlob(terjemahan)
 
@@ -342,17 +451,6 @@ def scrapping():
             hasil_scrapping.clear()
             crawling_twitter_query(query, jumlah)
             return render_template('scrapping.html', value=hasil_scrapping)
-        
-        elif request.form.get('scrapping-tanggal') == 'Scrapping':
-
-            since = request.form.get('since')
-            kata_kunci = request.form.get('kata_kunci')
-            
-            until = request.form.get('until')
-            hasil_scrapping.clear()
-            
-            crawling_twitter_tanggal(kata_kunci, since, until)
-            return render_template('scrapping.html', value=hasil_scrapping)
 
 
     return render_template('scrapping.html', value=hasil_scrapping)
@@ -386,14 +484,36 @@ def preprocessing():
 
 @app.route('/klasifikasi',  methods= ['POST', 'GET'])
 def klasifikasi():
-    # if request.method == 'POST':
-    #     if request.form.get('matriks') == 'matriks':
-    
-    return render_template('klasifikasi.html',wc=imageUrl,diagram=imageUrlDiagram,diagramBatang=imageUrlDiagramBatang , accuracy=akurasi, tables=[df.to_html(classes='table table-striped', index=False)], titles=df.columns.values, tables2=[df2.to_html(classes='table table-striped', index=False)], titles2=df2.columns.values)
-     
+    if akurasi == 0:
+        return render_template('klasifikasi.html')
+    else:
+        return render_template('klasifikasi.html', accuracy=akurasi, tables=[df.to_html(classes='table table-striped', index=False, justify='left')], titles=df.columns.values, tables2=[df2.to_html(classes='table table-striped', index=False, justify='left')], titles2=df2.columns.values)
+       
             
 
-          
+@app.route('/predict', methods=["GET", "POST"])
+def predict():
+    if request.method == 'POST':
+        if request.form.get('upload_file') == 'Upload':
+            file = request.files['file']
+            if not allowed_files(file.filename):
+                flash('Format Salah', 'upload_category')
+                return render_template('predict.html', value=hasil_model_predict)
+            if file and allowed_files(file.filename):
+                flash('Upload Berhasil', 'upload_category')
+                file.save("templates/assets/files/Data Labelling Model Predict Ranita.csv")
+                return render_template('predict.html', value=hasil_model_predict)
+
+        hasil_model_predict.clear()
+        if request.form.get('predict') == 'Model Predict':
+            model_predict()
+            return render_template('predict.html', value=hasil_model_predict)
+        if request.form.get('visualisasi') == 'Visualisasi':
+            return redirect(url_for('klasifikasi'))
+
+        
+    return render_template('predict.html', value=hasil_model_predict)
+
 
 @app.route('/labelling', methods= ['POST', 'GET'])
 def labelling():

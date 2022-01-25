@@ -28,6 +28,10 @@ Coded by www.creative-tim.com
   <link href="assets/css/paper-dashboard.css?v=2.0.1" rel="stylesheet" />
   <!-- CSS Just for demo purpose, don't include it in your project -->
   <link href="assets/demo/demo.css" rel="stylesheet" />
+
+  
+  
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.11.3/datatables.min.css"/>
 </head>
 
 <body class="">
@@ -49,19 +53,19 @@ Coded by www.creative-tim.com
       </div>
       <div class="sidebar-wrapper">
         <ul class="nav">
-          <li class="active ">
+          <li class=" ">
             <a href="{{ url_for('index') }}">
               <i class="nc-icon nc-bank"></i>
               <p>Dashboard</p>
             </a>
           </li>
-          <li>
+          <li class="">
             <a href="{{ url_for('scrapping') }}">
               <i class="nc-icon nc-zoom-split"></i>
               <p>Scrapping</p>
             </a>
           </li>
-          <li>
+          <li >
             <a href="{{ url_for('preprocessing') }}">
               <i class="nc-icon nc-atom"></i>
               <p>Preprocessing</p>
@@ -78,13 +82,13 @@ Coded by www.creative-tim.com
               <i class="nc-icon nc-chart-bar-32"></i>
               <p>Klasifikasi</p>
             </a>
-          </li>
-          <li>
+          </li> 
+          <li class="active">
             <a href="{{ url_for('predict') }}">
               <i class="nc-icon nc-support-17"></i>
               <p>Model Predict</p>
             </a>
-          </li>
+          </li>    
         </ul>
       </div>
     </div>
@@ -100,7 +104,7 @@ Coded by www.creative-tim.com
                 <span class="navbar-toggler-bar bar3"></span>
               </button>
             </div>
-            <a class="navbar-brand" href="javascript:;">Dashboard</a>
+            <a class="navbar-brand" href="javascript:;">Model Predict</a>
           </div>
           <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navigation" aria-controls="navigation-index" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-bar navbar-kebab"></span>
@@ -136,39 +140,118 @@ Coded by www.creative-tim.com
           </div>
         </div>
       </nav>
+
       <!-- End Navbar -->
       <div class="content">
+
         <div class="card">
           <div class="card-body">
-             <h3 class="description text-center m-5" style="font-weight: bold;">ANALISIS SENTIMEN TERHADAP XIAOMI INDONESIA MENGGUNAKAN METODE NAIVE BAYES</h3>  
-             <div class="text-center">
-                <img class="img-fluid " style="width: 25%;" src="assets/img/logo_umk.png" alt="">
-             </div>
-             <br>
-             <h3 class="description text-center" style="font-weight: bold; " >201851242</h3> 
-             <h3 class="description text-center" style="font-weight: bold; margin-top:-30px;">RANITA WAHYU UTAMI</h3> 
+            <h5 class="card-title">Upload file .csv :</h5>
+            <form method="POST", enctype="multipart/form-data">
+              <div class="input-group">
+                <div class="custom-file">
+                  <input type="file" class="custom-file-input" id="file"  name="file" aria-describedby="file">
+                  <label class="custom-file-label" for="file">Select file</label>
+                </div>
+              </div>
+              <input class="btn"  style="background-color: #ff6700;" type="submit" name="upload_file" id="upload_file"  value="Upload">
+              <input class="btn"  style="background-color: #ff6700;" type="submit" name="predict" id="predict"  value="Model Predict">
+            </form>
+
+            {% with messages = get_flashed_messages(category_filter=["preprocessing_data"]) %}
+                      {% if messages %}
+                      <div class="alert alert-success" role="alert">
+                        {{ messages[0] }}
+                      </div>
+                      {% endif %}                     
+           {% endwith %}
+           
+            {% with messages = get_flashed_messages(category_filter=["upload_category"]) %}
+                      {% if messages %}
+                      <div class="alert alert-success" role="alert">
+                        {{ messages[0] }}
+                      </div>
+                      {% endif %}                     
+           {% endwith %}
+                      
           </div>
         </div>
         
-      </div>
-      <footer class="footer" style="position: absolute; bottom: 0; width: -webkit-fill-available;">
-        <div class="container-fluid">
-          <div class="row">
-            <nav class="footer-nav">
-              
-            </nav>
-            <div class="credits ml-auto">
-              <span class="copyright">
-                © 2021, made with <i class="fa fa-heart heart"></i> by Ranita Wahyu Utami
-              </span>
+        <div class="card">
+          
+          <div class="card-body table-responsive">
+            <!-- upload file -->
+            <div class="d-flex mb-3" style="justify-content: space-between;">
+              <h5 class="card-title p-2">Tabel Hasil Model Predict :</h5>
+              <a class="btn btn-secondary" href="assets/files/Data Hasil Model Predict.csv" role="button" style="background-color: #ff6700;">Download</a>
             </div>
+          
+            <table class="table table-striped myTable" id="model-predict">
+              <thead>
+                <tr>
+                  <th scope="col">No</th>
+                  <th scope="col">Tweet</th>
+                  <th scope="col">Sentimen</th>        
+                </tr>
+              </thead>
+              <tbody>
+                
+                  {% set count = namespace(value=1) %}
+                  {% for item in value %}
+                    <tr>
+                      <th scope="row">{{ count.value  }}</th>
+                      <td>{{ item[0] }}</td>
+                      <td>{{ item[1] }}</td>
+                      <td>{{ item[2] }}</td>                
+                    </tr>
+                    {% set count.value = count.value + 1 %}
+                  {% endfor %}
+              </tbody>
+            </table>
           </div>
         </div>
-      </footer>
-    </div>
-
+      </div>
+      {% with messages = get_flashed_messages(category_filter=["model_berhasil"]) %}
+                      {% if messages %}
+                      <div class="container">
+                        <div class="card-group" style="display: flex; justify-content: space-between; grid-gap: 2em;">
+                          <div class="card" style="border-radius: 10px;">
+                            <!-- <img class="card-img-top" src="..." alt="Card image cap"> -->
+                            <div class="card-body">
+                              <h5 class="card-title">Diagram Batang</h5>
+                              <hr>
+                              <img src="assets/files/diagram-batang2.png"  style="width: 500px;height: 500px">
+                            </div>
+                          </div>
+                          <div class="card" style="border-radius: 10px;">
+                            <!-- <img class="card-img-top" src="..." alt="Card image cap"> -->
+                            <div class="card-body">
+                              <h5 class="card-title">Diagram Lingkaran</h5>
+                              <hr>
+                              
+                              <img src="assets/files/diagram2.png"  style="width: 500px;height: 500px;object-fit:cover">
+                            </div>
+                          </div>
+                      </div>
+                      
+                
+                      <div class="card" style="border-radius: 10px; margin-top:30px">
+                        <!-- <img class="card-img-top" src="..." alt="Card image cap"> -->
+                        <div class="card-body">
+                          <h5 class="card-title">Wordcloud</h5>
+                          <hr>
+                          <center><img src="assets/files/wordcloud2.png"  style="width: 500px;height: 500px;object-fit:cover"></center>
+                        </div>
+                      </div>
+                      </div>
+                      {% endif %}                     
+           {% endwith %}
+      
     
+      
+    </div>
   </div>
+
   <!--   Core JS Files   -->
   <script src="assets/js/core/jquery.min.js"></script>
   <script src="assets/js/core/popper.min.js"></script>
@@ -182,6 +265,30 @@ Coded by www.creative-tim.com
   <script src="assets/js/plugins/bootstrap-notify.js"></script>
   <!-- Control Center for Now Ui Dashboard: parallax effects, scripts for the example pages etc -->
   <script src="assets/js/paper-dashboard.min.js?v=2.0.1" type="text/javascript"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.11.3/datatables.min.js"></script>
+
+  
+
+<script>
+
+// File Upload
+  $(document).ready( function () {
+    $('#model-predict').DataTable();
+    $('.file-upload').file_upload();
+} );
+
+</script>
+
+<script>
+  
+  document.querySelector('.custom-file-input').addEventListener('change', function (e) {
+    var name = document.getElementById("file").files[0].name;
+    var nextSibling = e.target.nextElementSibling
+    nextSibling.innerText = name
+  })
+</script>
 </body>
+
 
 </html>

@@ -28,6 +28,9 @@ Coded by www.creative-tim.com
   <link href="assets/css/paper-dashboard.css?v=2.0.1" rel="stylesheet" />
   <!-- CSS Just for demo purpose, don't include it in your project -->
   <link href="assets/demo/demo.css" rel="stylesheet" />
+  
+  
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.11.3/datatables.min.css"/>
   <style>
     .table-responsive::-webkit-scrollbar {
       width: 0 !important
@@ -87,6 +90,12 @@ Coded by www.creative-tim.com
               <p>Klasifikasi</p>
             </a>
           </li>
+          <li>
+            <a href="{{ url_for('predict') }}">
+              <i class="nc-icon nc-support-17"></i>
+              <p>Model Predict</p>
+            </a>
+          </li>
         </ul>
       </div>
     </div>
@@ -143,7 +152,7 @@ Coded by www.creative-tim.com
       <div class="content">
 
         
-
+      
         <div class="card" style="border-radius: 10px;">
           <!-- <img class="card-img-top" src="..." alt="Card image cap"> -->
           <div class="card-body">
@@ -187,7 +196,6 @@ Coded by www.creative-tim.com
                   <h5 class="card-title">Diagram Batang</h5>
                   <hr>
                   <img src="assets/files/diagram-batang.png"  style="width: 500px;height: 500px">
-                  <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p>
                 </div>
               </div>
               <div class="card" style="border-radius: 10px;">
@@ -197,7 +205,6 @@ Coded by www.creative-tim.com
                   <hr>
                   
                   <img src="assets/files/diagram.png"  style="width: 500px;height: 500px;object-fit:cover">
-                  <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p>
                 </div>
               </div>
           </div>
@@ -225,6 +232,7 @@ Coded by www.creative-tim.com
     </div>
   </div>
   <!--   Core JS Files   -->
+  <!--   Core JS Files   -->
   <script src="assets/js/core/jquery.min.js"></script>
   <script src="assets/js/core/popper.min.js"></script>
   <script src="assets/js/core/bootstrap.min.js"></script>
@@ -237,6 +245,16 @@ Coded by www.creative-tim.com
   <script src="assets/js/plugins/bootstrap-notify.js"></script>
   <!-- Control Center for Now Ui Dashboard: parallax effects, scripts for the example pages etc -->
   <script src="assets/js/paper-dashboard.min.js?v=2.0.1" type="text/javascript"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.11.3/datatables.min.js"></script>
+
+  
+  <script>
+    $(document).ready( function () {
+      $('#myTable').DataTable();
+  } );
+  
+  </script>
 </body>
 
 </html>

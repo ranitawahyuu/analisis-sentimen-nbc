@@ -80,7 +80,14 @@ Coded by www.creative-tim.com
               <i class="nc-icon nc-chart-bar-32"></i>
               <p>Klasifikasi</p>
             </a>
-          </li>                        
+          </li> 
+          
+          <li>
+            <a href="{{ url_for('predict') }}">
+              <i class="nc-icon nc-support-17"></i>
+              <p>Model Predict</p>
+            </a>
+          </li>
         </ul>
       </div>
     </div>
@@ -128,23 +135,12 @@ Coded by www.creative-tim.com
 
 
       <div class="content">
-        <div class="card">
-          <div class="card-body">
-            <h5 class="card-title">Scrapping data berdasarkan :</h5>
-            <input type="checkbox" class="btn-check" id="btn-checkbox-query" autocomplete="off">
-              <label class="btn" for="btn-checkbox-query"  style="background-color: #ff6700; color:aliceblue;">Query</label><br>
-
-              <input type="checkbox" class="btn-check" id="btn-checkbox-tanggal" autocomplete="off">
-              <label class="btn" for="btn-checkbox-tanggal" style="background-color: #ff6700; color:aliceblue;">Tanggal</label><br>
-
-            </form>
-          </div>
-        </div>
+       
 
 
         <div class="card" id="div-query">
           <div class="card-body">
-            <h5 class="card-title">Berdasarkan jumlah data</h5>
+            <h5 class="card-title">Scrapping Data Twitter</h5>
             <form method="post" action="/scrapping">
               <div class="input-group no-border">
                 <input type="text" value="" class="form-control" name="query" placeholder="Ketikkan kata kunci ..." autocomplete="off" >
@@ -166,29 +162,7 @@ Coded by www.creative-tim.com
           </div>
         </div>
 
-        <div class="card" id="div-tanggal">
-          <div class="card-body">
-            <h5 class="card-title">Berdasarkan tanggal</h5>
-            <form method="post" action="/scrapping">
-              <!-- <div class="input-group no-border">
-                <input type="text" value="" class="form-control" name="query" placeholder="Ketikkan kata kunci">
-              </div>
-              <div class="input-group no-border">
-                <input type="number" value="" class="form-control" name="jumlah" placeholder="Ketikkan jumlah data">
-              </div> -->
-              <div class="input-group no-border">
-                <input type="text" value="" class="form-control" name="kata_kunci" placeholder="Ketikkan kata kunci ..." autocomplete="off" >
-              </div>
-              <div class="input-group no-border">
-                <input type="date" id="since" class="form-control datetimepicker-input" name="since" placeholder="sejak"/>
-              </div>
-              <div class="input-group no-border">
-                <input type="date" id="until" class="form-control datetimepicker-input" name="until" placeholder="sampai"/>
-              </div>
-              <input type="submit" value="Scrapping" class="btn btn-secondary" name="scrapping-tanggal" placeholder="jumlah..." style="background-color: #ff6700;">
-            </form>
-          </div>
-        </div>
+        
         <div class="card">
 
         
@@ -266,40 +240,6 @@ Coded by www.creative-tim.com
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
 <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.11.3/datatables.min.js"></script>
 
-<script>
-  $("#div-query").hide();
-  $(function () {
-    // jquery cari dong elenment dengan id #btn-checkbox-query
-    // lalu klik
-    $("#btn-checkbox-query").click(function () {
-        // jika keklik
-        // maka tampilkan div dengan id #div-query
-        // jika id checkbox ini bukan #btn-checkbox-tanggal, maka check hapus
-        // maka sembunyikan div dengan id #div-tanggal
-        if ($(this).is(":checked")) {
-            $("#div-query").show();
-            $('#btn-checkbox-tanggal').not(this).prop('checked', false);  
-            $("#div-tanggal").hide();
-        } else {
-            $("#div-query").hide();
-        }
-    });
-});
-
-$(function () {
-  $("#div-tanggal").hide();
-  $("#btn-checkbox-tanggal").click(function () {
-      if ($(this).is(":checked")) {
-          $("#div-tanggal").show();
-          $('#btn-checkbox-query').not(this).prop('checked', false)
-          $("#div-query").hide();
-      } else {
-          $("#div-tanggal").hide();
-      }
-  });
-});
-
-</script>
 <script>
   $(document).ready( function () {
     $('#myTable').DataTable();
