@@ -9,10 +9,12 @@ import tweepy
 import csv
 import nltk
 from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import TfidfVectorizer
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory, StopWordRemover, ArrayDictionary
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 nltk.download('punkt')
 from wordcloud import WordCloud
+from scipy.sparse import csr_matrix
 import matplotlib.pyplot as plt
 from PIL import Image
 import numpy as np
@@ -50,6 +52,13 @@ ALLOWED_EXTENSION = set(['csv'])
 def allowed_files(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSION
 def prepropecossing_twitter():
+    global normalizad_word_dict
+    normalizad_word = pd.read_excel("templates/assets/normalisasi.xlsx")
+
+    normalizad_word_dict = {}
+    for index, row in normalizad_word.iterrows():
+        if row[0] not in normalizad_word_dict:
+            normalizad_word_dict[row[0]] = row[1]
     # Membuat File CSV
     file = open('templates/assets/files/Data Preprocessing Ranita.csv', 'w', newline='', encoding='utf-8')
     writer = csv.writer(file)
@@ -63,20 +72,31 @@ def prepropecossing_twitter():
             # proses clean
             clean = ' '.join(re.sub("(@[A-Za-z0-9]+)|([^0-9A-Za-z \t])|(\w+:\/\/\S+)"," ", row[2]).split())
             clean = re.sub("\d+", "", clean)
+            clean = re.sub(r"\b[a-zA-Z]\b", "", clean)
             
 
-            # proses casefold
+            # proses casefolding
             casefold = clean.casefold()
 
+            # proses normalize
+            normalisasi = proses_normalisasi(casefold)
+
             # proses tokenize
-            tokenizing = nltk.tokenize.word_tokenize(casefold)
+            tokenizing = nltk.tokenize.word_tokenize(normalisasi)
 
 
             # proses stop removal
             # mengambil data stop word dari library
             stop_factory = StopWordRemoverFactory().get_stop_words()
             # menambah stopword sendiri
-            more_stop_word = [ "apa", "yg"]
+            more_stop_word = [ "apa", "yg", 'yg', 'dg', 'rt', 'dgn', 'ny', 'd', 'klo',
+                  'kalo', 'amp', 'biar', 'bikin', 'bilang',
+                  'gak', 'ga', 'krn', 'nya', 'nih', 'sih',
+                  'si', 'tau', 'tdk', 'tuh', 'utk', 'ya',
+                  'jd', 'jgn', 'sdh', 'aja', 'n', 't', 'dm',
+                  'nyg', 'hehe', 'pen', 'u', 'nan', 'loh', 'rt',
+                  '&amp', 'yah', 'hallo', 'halo', 'hello', 'bgt', 'td',
+                  'no', 'yaa', 'ae', 'kali', 'segera', 'rd', 'kak', 'gmn', 'min']
             # menggabungkan stopword library + milik sendiri
             data = stop_factory + more_stop_word
             
@@ -90,66 +110,92 @@ def prepropecossing_twitter():
             # mamanggil fungsi stemming
             stemmer = factory.create_stemmer()
             stemming = stemmer.stem(kalimat)
+            
 
-
-            tweets =[row[0], row[1], row[2], clean, casefold, tokenizing, stop_wr, stemming]
+            tweets =[row[0], row[1], row[2], clean, casefold, normalisasi, tokenizing, stop_wr, stemming]
             hasiL_preprocessing.append(tweets)
 
             writer.writerow(tweets)
             flash('Preprocessing Berhasil', 'preprocessing_data')
 
 
+def normalized_term(mosok):
+    return [normalizad_word_dict[term] if term in normalizad_word_dict else term for term in mosok]
+
+def proses_normalisasi(data):
+    tokens = nltk.tokenize.word_tokenize(data)
+    hasil = normalized_term(tokens)
+    kalimat = ' '.join(hasil)
+    return kalimat
 
 df= None
 df2 = None
+
 akurasi = 0
+
 def klasifikasi_data():
     global df
     global df2
     global akurasi
-    # membca csv
+
+    # membaca csv 
     data = pd.read_csv("templates/assets/files/Data Labelling Ranita.csv")
     tweet = data.iloc[:, 1]
     y =  data.iloc[:, 2]
 
-    x_train, x_test, y_train, y_test = train_test_split(tweet,y, test_size=0.2)
-
     # Vectorize text reviews to numbers
-    vec = CountVectorizer(decode_error="replace", max_features=5000)
-    x = vec.fit_transform(x_train)
-    x2 = vec.transform(x_test)
-    # tfidf
-    tf_transform_train = TfidfTransformer().fit(x)
-    x = tf_transform_train.transform(x)
+    # vec = CountVectorizer()
+    # x = vec.fit_transform(tweet)
+    
+    # # tfidf
+    # tf_transform = TfidfTransformer().fit(x)
+    # x = tf_transform.transform(x)
 
-    tf_transform_test = TfidfTransformer().fit(x2)
-    x2 = tf_transform_test.transform(x2)
+
+    #split data training dan testing
+    x_train, x_test, y_train, y_test = train_test_split(tweet,y, test_size=0.2, random_state=42)
+     # tfidf
+    vectorizer = TfidfVectorizer(max_features=5000)
+    vectorizer.fit(tweet)
+    # tfidf = vectorizer.fit_transform(X_train)
+    names = vectorizer.get_feature_names()
+    Train_X_Tfidf= vectorizer.transform(x_train)
+    Test_X_Tfidf= vectorizer.transform(x_test)
 
     # naive  bayes
-
     clf = MultinomialNB()
-    clf.fit(x, y_train)
+    clf.fit(Train_X_Tfidf, y_train)
+
+    # menyimpan tfidf
+    df_train_tfidf = pd.DataFrame(data=csr_matrix.todense(Train_X_Tfidf))
+    df_train_tfidf.columns = names
+    df_train_tfidf.index = y_train
+    df_train_tfidf.to_csv('templates/assets/files/TFIDF Training.csv')
+
+
+    df_test_tfidf = pd.DataFrame(data=csr_matrix.todense(Test_X_Tfidf))
+    df_test_tfidf.columns = names
+    df_test_tfidf.index = y_test
+    df_test_tfidf.to_csv('templates/assets/files/TFIDF Testing.csv')
+
+
+    
+
 
 
     # joblib.dump(clf, 'templates/assets/files/model.pkl') 
     # joblib.dump(tf_transform_train, 'templates/assets/files/tfidf.pkl') 
     # joblib.dump(vec, 'templates/assets/files/countvec.pkl') 
-    pickle.dump(vec, open('templates/assets/files/countvec.pkl', 'wb'))
-    pickle.dump(tf_transform_train, open('templates/assets/files/tfidf.pkl', 'wb'))
+    pickle.dump(vectorizer, open('templates/assets/files/countvec.pkl', 'wb'))
+    pickle.dump(Train_X_Tfidf, open('templates/assets/files/tfidf.pkl', 'wb'))
     pickle.dump(clf, open('templates/assets/files/model.pkl', 'wb'))
-    
-    
 
-    predict = clf.predict(x2)
-
+    predict = clf.predict(Test_X_Tfidf)
 
     report = classification_report(y_test, predict, output_dict=True)
     # simpan ke csv
     clsf_report = pd.DataFrame(report).transpose()
     clsf_report.to_csv('templates/assets/files/Data Hasil Klasifikasi.csv', index= True)
-
-
-
 
     unique_label = np.unique([y_test, predict])
     cmtx = pd.DataFrame(
@@ -157,8 +203,6 @@ def klasifikasi_data():
         index=['{:}'.format(x) for x in unique_label], 
         columns=['{:}'.format(x) for x in unique_label]
     )
-
-
     
     cmtx.to_csv('templates/assets/files/Data Confusion Matrix.csv', index= True)
 
@@ -180,12 +224,10 @@ def klasifikasi_data():
     mask = np.array(Image.open("love.png"))
     wordcloud = WordCloud(width=1600, height=800, max_font_size=200, background_color='white', mask = mask)
     wordcloud.generate(kalimat)
+    
     plt.figure(figsize=(12,10))
-
     plt.imshow(wordcloud, interpolation='bilinear')
-
     plt.axis("off")
-
     plt.savefig('templates/assets/files/wordcloud.png')
 
     # diagram
@@ -215,6 +257,7 @@ def klasifikasi_data():
     plt.ylabel("Jumlah Tweet")
     plt.title("Presentase Sentimen Tweet Xiaomi Redmi")
     plt.savefig('templates/assets/files/diagram-batang.png')
+    
         
 
 
@@ -245,6 +288,7 @@ def model_predict():
     writer = csv.writer(file)
     for i, line in data.iterrows():
         isi = line[1]
+        label = line[2]
         # # transform cvector & tfidf
         transform_cvec = vec.transform([isi])
         transform_tfidf = tfidf.transform(transform_cvec)
@@ -253,7 +297,7 @@ def model_predict():
         predic_result = model.predict(transform_tfidf)
         print(predic_result)
 
-        data = [isi , predic_result[0]]
+        data = [isi , predic_result[0], label]
         hasil_model_predict.append(data)
         writer.writerow(data)
         
@@ -316,8 +360,7 @@ def model_predict():
 
     for i in tweet.tolist():
         s =("".join(i))
-        kalimat += s
-
+        kalimat += s 
     urllib.request.urlretrieve("https://firebasestorage.googleapis.com/v0/b/sentimen-97d49.appspot.com/o/Circle-icon.png?alt=media&token=b9647ca7-dfdb-46cd-80a9-cfcaa45a1ee4", 'love.png')
     mask = np.array(Image.open("love.png"))
     wordcloud = WordCloud(width=1600, height=800, max_font_size=200, background_color='white', mask = mask)
@@ -375,8 +418,6 @@ def crawling_twitter_query(query, jumlah):
      #membuat file scrapping csv
     file = open('templates/assets/files/Data Scrapping Ranita.csv', 'w', newline='', encoding='utf-8')
     writer = csv.writer(file)
-
-
     
     hasil_scrapping.clear()
 
@@ -384,10 +425,8 @@ def crawling_twitter_query(query, jumlah):
         tweet_properties = {}
         tweet_properties["tanggal_tweet"] = tweet.created_at
         tweet_properties["username"] = tweet.user.screen_name
-        tweet_properties["tweet"] =  tweet.full_text.replace('\n', '')
+        tweet_properties["tweet"] =  tweet.full_text.replace('\n', ' ')
         
-        
- 
         # Menuliskan data ke csv
         tweets =[tweet.created_at, tweet.user.screen_name, tweet.full_text.replace('\n', '')]
         if tweet.retweet_count > 0:
@@ -411,7 +450,7 @@ def labelling_process():
         for row in readCSV:
             tweet = {}
             try:
-                value = translator.translate(row[6], dest='en')
+                value = translator.translate(row[8], dest='en')
             except:
                 print("Terjadi kesalahan", flush=True)
             terjemahan = value.text
@@ -426,7 +465,7 @@ def labelling_process():
                 tweet['sentiment'] = "Negatif"
 
             labelling = tweet['sentiment']
-            tweets =[row[2], row[7], labelling]
+            tweets =[row[1], row[8], labelling]
             hasil_labelling.append(tweets)
 
             writer.writerow(tweets)
@@ -474,7 +513,7 @@ def preprocessing():
         hasiL_preprocessing.clear()
         if request.form.get('preprocessing_process') == 'Preprocessing Data':
             prepropecossing_twitter()
-            
+        
             return render_template('preprocessing.html', value=hasiL_preprocessing)
         if request.form.get('lanjutkan') == 'Lanjutkan':
             labelling_process()
@@ -484,6 +523,21 @@ def preprocessing():
 
 @app.route('/klasifikasi',  methods= ['POST', 'GET'])
 def klasifikasi():
+    if request.method == "POST":
+        if request.form.get('upload_file') == 'Upload':
+            file = request.files['file']
+            if not allowed_files(file.filename):
+                flash('Format Salah', 'upload_category')
+                return render_template('klasifikasi.html')
+            if file and allowed_files(file.filename):
+                flash('Upload Berhasil', 'upload_category')
+                file.save("templates/assets/files/Data Labelling Ranita.csv")
+                return render_template('klasifikasi.html')
+        if request.form.get('klasifikasi') == 'Klasifikasi':
+            klasifikasi_data()
+            flash('Klasifikasi Berhasil', 'klasifikasi_data')
+            return render_template('klasifikasi.html', accuracy=akurasi, tables=[df.to_html(classes='table table-striped', index=False, justify='left')], titles=df.columns.values, tables2=[df2.to_html(classes='table table-striped', index=False, justify='left')], titles2=df2.columns.values)
+       
     if akurasi == 0:
         return render_template('klasifikasi.html')
     else:
@@ -531,10 +585,10 @@ def labelling():
         hasil_labelling.clear()
         if request.form.get('labelling_data') == 'Labelling Data':
             labelling_process()
-            
             return render_template('Labelling.html', value=hasil_labelling)
         if request.form.get('lanjutkan') == 'Lanjutkan':
             klasifikasi_data()
+            flash('Klasifikasi Berhasil', 'klasifikasi_data')
             return redirect(url_for('klasifikasi'))
 
 

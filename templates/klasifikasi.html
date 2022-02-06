@@ -151,10 +151,42 @@ Coded by www.creative-tim.com
       <!-- End Navbar -->
       <div class="content">
 
-        
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Upload file Labelling.csv :</h5>
+            <form method="POST", enctype="multipart/form-data">
+              <div class="input-group">
+                <div class="custom-file">
+                  <input type="file" class="custom-file-input" id="file"  name="file" aria-describedby="file">
+                  <label class="custom-file-label" for="file">Select file</label>
+                </div>
+              </div>
+              <input class="btn"  style="background-color: #ff6700;" type="submit" name="upload_file" id="upload_file"  value="Upload">
+              <input class="btn"  style="background-color: #ff6700;" type="submit" name="klasifikasi" id="predict"  value="Klasifikasi">
+            </form>
+
+            {% with messages = get_flashed_messages(category_filter=["klasifikasi_data"]) %}
+                      {% if messages %}
+                      <div class="alert alert-success" role="alert">
+                        Klasifikasi Berhasil
+                      </div>
+                      {% endif %}                     
+           {% endwith %}
+           
+            {% with messages = get_flashed_messages(category_filter=["upload_category"]) %}
+                      {% if messages %}
+                      <div class="alert alert-success" role="alert">
+                        {{ messages[0] }}
+                      </div>
+                      {% endif %}                     
+           {% endwith %}
+                      
+          </div>
+        </div>
       
         <div class="card" style="border-radius: 10px;">
           <!-- <img class="card-img-top" src="..." alt="Card image cap"> -->
+  
           <div class="card-body">
             <h5 class="card-title">Klasifikasi Naive Bayes</h5>
             <hr>
@@ -166,14 +198,20 @@ Coded by www.creative-tim.com
                         {% endfor %}
                         
                       </div>
-
+                      {% with messages = get_flashed_messages(category_filter=["klasifikasi_data"]) %}
+                      {% if messages %}
                       <div class="alert alert-success" role="alert">
-                          Akurasi Naive Bayes {{ accuracy }} %
-                      </div>
+                        Akurasi Naive Bayes {{ accuracy }} %
+                    </div>
+                      {% endif %}                     
+                     {% endwith %}
+
+                      
                     
           </div>
         </div>
-
+        {% with messages = get_flashed_messages(category_filter=["klasifikasi_data"]) %}
+        {% if messages %}
         <div class="card" style="border-radius: 10px;">
           <!-- <img class="card-img-top" src="..." alt="Card image cap"> -->
           <div class="card-body">
@@ -225,6 +263,10 @@ Coded by www.creative-tim.com
             </div>
           </div>
         </div>
+        {% endif %}                     
+      {% endwith %}
+
+        
 
         
       </div>

@@ -146,7 +146,7 @@ Coded by www.creative-tim.com
 
         <div class="card">
           <div class="card-body">
-            <h5 class="card-title">Upload file .csv :</h5>
+            <h5 class="card-title">Upload File Labelling .csv :</h5>
             <form method="POST", enctype="multipart/form-data">
               <div class="input-group">
                 <div class="custom-file">
@@ -267,27 +267,24 @@ Coded by www.creative-tim.com
   <script src="assets/js/paper-dashboard.min.js?v=2.0.1" type="text/javascript"></script>
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
   <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.11.3/datatables.min.js"></script>
+  <script>
 
-  
-
-<script>
-
-// File Upload
-  $(document).ready( function () {
-    $('#model-predict').DataTable();
-    $('.file-upload').file_upload();
-} );
-
-</script>
-
-<script>
-  
-  document.querySelector('.custom-file-input').addEventListener('change', function (e) {
-    var name = document.getElementById("file").files[0].name;
-    var nextSibling = e.target.nextElementSibling
-    nextSibling.innerText = name
-  })
-</script>
+    // File Upload
+      $(document).ready( function () {
+        $('#model-predict').DataTable();
+        $('.file-upload').file_upload();
+    } );
+    
+    </script>
+    
+    <script>
+      
+      document.querySelector('.custom-file-input').addEventListener('change', function (e) {
+        var name = document.getElementById("file").files[0].name;
+        var nextSibling = e.target.nextElementSibling
+        nextSibling.innerText = name
+      })
+    </script>
 </body>
 
 
